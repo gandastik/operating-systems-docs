@@ -4,7 +4,7 @@
 - **Referee**
   - Resource allocation among users, applications
   - Isolation of different users, applications from each other
-  - Coomunication between users, application
+  - Communication between users, application
 - **Illusionist**
   - Each application appear to have the entire machine to itself
   - Infinite number of processors, (near) infinite amount of memory, reliable storage, reliable network transport
@@ -43,7 +43,7 @@ didn't have keyboard, mouse, display monitor at the time -> punched card and pri
   - Users would stand in line to use the computer : **QUEUE**
 - **Batch systems** : automatically load the new input (program) after the program terminal detected
   - Keep CPU busy by having queue of jobs
-  - OS would load next job while currnt one runs
+  - OS would load next job while current one runs
   - Users would submit jobs (analogy: in the "tray" of printer I/P), and wait ,and wait, and wait...
 
 ### Time-Sharing Operating Systems
