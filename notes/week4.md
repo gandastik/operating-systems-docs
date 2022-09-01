@@ -52,10 +52,10 @@
     - Memory address translation
     - Dual mode operation
       - Priviledge/non-priviledge mode
-      - System calls
+        - ***System calls*** : a way in which a computer program request a service from the kernel
   - SW
     - Process
-    - System calls
+      - System calls
 
 ### Hardware Support Dual-Mode Operation
 - **Kernel mode**
@@ -72,7 +72,7 @@
   - trap = ตรวจสอบข้อมูลทุกอย่างก่อนที่จะส่งไปยัง system library เพื่อไม่ให้เกิด error
    - Transfer from **User mode to Priviledge mode**
 - **Limits on memory accesses**
-  - preven user code from overwriting the kernel
+  - prevent user code from overwriting the kernel
 - **Timer**
   - regain control from a user program in a loop
 
@@ -94,7 +94,6 @@
 - Thread : a sequence of instructions within a process
   - เปรียบได้กับ microprocessor เสมือน
 - Address space : RAM
-  -
 
 ### Process
 - **Process Control Block (PCB)** in kernel which store
