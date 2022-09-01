@@ -30,7 +30,7 @@
   - **Protection of HW** -> Partition
   - Additional -> fully control of hardware (ไม่มีส่วนไหนของ SW ที่ติดกันกับ HW เลย)
 
-### UNIx Structure
+### UNIX Structure
 
 ### User/Kernel (Priviledge) Mode
 - the reason why the window95 is so fucking bad because it allow the user to directly use the hardware
