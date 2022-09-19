@@ -1,2 +1,3 @@
 pdf/
-
+lab/*/bin/
+lab/*/obj/
