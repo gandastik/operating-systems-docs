@@ -1,4 +1,5 @@
 ﻿/*
+VERSION: 3
 Made by:
 63010035 กฤษฎาง แสวงศิริผล
 63010082 กิตติภณ สิงห์ชม
@@ -103,7 +104,7 @@ namespace Program
                 s.Release();
             }
         }
-        static void Main(string[] args)
+        public static void Solution()
         {
             Thread t1 = new Thread(th01);
             Thread t11 = new Thread(th011);
