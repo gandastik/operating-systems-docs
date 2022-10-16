@@ -47,8 +47,8 @@ namespace Program {
             Thread A = new Thread(ThReadX);
             Thread B = new Thread(ThWriteX);
         
-            B.Start();
             A.Start();
+            B.Start();
         }
     }
 }
