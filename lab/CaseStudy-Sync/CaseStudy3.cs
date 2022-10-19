@@ -51,7 +51,7 @@ namespace Program
         static void th01()
         {
             int j = 0;
-            while(j < 5 && exitflag == 0){ // divide into 5 iteration (because the problem need to enqueue until 50)
+            while(j < 5){ // divide into 5 iteration (because the problem need to enqueue until 50)
                 if(canEnqueue){
                     s.WaitOne();
                     for (int i = (10*j)+1; i < ((j+1)*10)+1; i++) // can only enqueue 10 at a times limitation by the buffer's size
@@ -89,14 +89,12 @@ namespace Program
         static void th02(object t)
         {
             int j;
-            while(exitflag == 0 || exitflag == 2) {
+            while(exitflag == 0) {
                 s.WaitOne(); // queueing the thread
                     if(!canEnqueue){ // the dequeuing thread need to dequeue 10 elements from the buffer
                         j = DeQueue();
-                        if(j != 0) {
-                            Thread.Sleep(100);
-                            Console.WriteLine("j={0}, thread:{1}", j, t);
-                        } 
+                        Thread.Sleep(100);
+                        Console.WriteLine("j={0}, thread:{1}", j, t);
                         if (j == 50){ // check if dequeued element met the requirement
                             exitflag = 1;
                         }

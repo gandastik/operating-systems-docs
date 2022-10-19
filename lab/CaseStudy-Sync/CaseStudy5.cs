@@ -90,10 +90,8 @@ namespace Program
                 lock (_Lock) {
                     if(Count > 0){  // if the buffer have element to dequeue
                         j = DeQueue();
-                        if(j != 0) {
-                            Thread.Sleep(100);
-                            Console.WriteLine("j={0}, thread:{1}", j, t);
-                        } 
+                        Thread.Sleep(100);
+                        Console.WriteLine("j={0},\tthread:{1}", j, t);
                         if (enqueueDone1 && enqueueDone2){  // when the task are done
                             exitflag = 1;
                         }
@@ -112,7 +110,7 @@ namespace Program
             /** DESC:
             * each thread are schedule to work randomly -> so we need to implement synchronization by using Lock
             * the enqueuing thread need to have limit (10 -> Buffer's size) of how much they can enqueue in a row
-            * also the dequeuing thread can not dequeue more than limit (Count >= 0)
+            * also the dequeuing thread can not dequeue more than limit (Count > 0)
             **/
             t1.Start();
             t11.Start();

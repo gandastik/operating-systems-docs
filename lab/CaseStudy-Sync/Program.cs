@@ -7,10 +7,10 @@ namespace Program{
             // Thread_safe_2.Solution();
             // Console.WriteLine("Version 3");
             // Thread_safe_3.Solution();
-            // Console.WriteLine("Version 4");
-            // Thread_safe_4.Solution();
-            Console.WriteLine("Version 5");
-            Thread_safe_5.Solution();
+            Console.WriteLine("Version 4");
+            Thread_safe_4.Solution();
+            // Console.WriteLine("Version 5");
+            // Thread_safe_5.Solution();
         }
     }
 }
