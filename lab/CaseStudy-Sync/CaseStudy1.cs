@@ -69,10 +69,8 @@ namespace Program
             for(i=0;i<50;i++){ // change this to 50, 'cause why not
                 s.WaitOne();
                 j = DeQueue();
-                if(j != 0) {
-                    Thread.Sleep(100);
-                    Console.WriteLine("j={0}, thread:{1}", j, t);
-                }
+                Thread.Sleep(100);
+                Console.WriteLine("j={0}, thread:{1}", j, t);
                 s.Release();
             }
         }

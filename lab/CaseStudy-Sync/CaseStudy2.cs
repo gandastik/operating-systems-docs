@@ -76,10 +76,8 @@ namespace Program
                 s.WaitOne();
                 for(i=0;i<5;i++){ // knowing that theres 2 thread that is doing dequeing so need to divide the work in to two pieces
                     j = DeQueue();
-                    if(j != 0) {
-                        Thread.Sleep(100);
-                        Console.WriteLine("j={0}, thread:{1}", j, t);
-                    }
+                    Thread.Sleep(100);
+                    Console.WriteLine("j={0}, thread:{1}", j, t);
                 }
                 s.Release();
             }

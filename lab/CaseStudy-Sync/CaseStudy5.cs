@@ -27,14 +27,10 @@ namespace Program
 
         private static bool enqueueDone1 = false;
         private static bool enqueueDone2 = false;
-        private static bool canEnqueue = true;
         static void EnQueue(int eq)
         {
             TSBuffer[Back] = eq;
             Back++;
-            if(Back >= BUFFER_SIZE){ // signal to enqueuing thread that it can't enqueue anymore
-                canEnqueue = false;
-            }
             Back %= 10;
             Count += 1;
         }
@@ -44,9 +40,6 @@ namespace Program
             int x = 0;
             x = TSBuffer[Front];
             Front++;
-            if(Front>=BUFFER_SIZE){  // signal to enqueing thread that it can the dequeing thread are done
-                canEnqueue = true; 
-            }
             Front %= 10;
             Count -= 1;
             return x;
@@ -57,7 +50,7 @@ namespace Program
             int i = 1;
             while(!enqueueDone1){ 
                 lock (_Lock) { // implementing Lock
-                    if(Count == 0 && canEnqueue){
+                    if(Count == 0){
                         EnQueue(i);
                         Thread.Sleep(5);
                         i++;
@@ -72,7 +65,7 @@ namespace Program
             int i = 101;
             while(!enqueueDone2){
                 lock (_Lock) {
-                    if(Count == 0 && canEnqueue){
+                    if(Count == 0){
                         EnQueue(i);
                         Thread.Sleep(5);
                         i++;
