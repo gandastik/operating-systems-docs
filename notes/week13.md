@@ -112,6 +112,7 @@ t1 -> A , t2 -> b, t3 -> c, t4 -> d, but when t1 -> b "deadlock" happens
 - คิวที่มี High Priority จะมี short time slices ก็ตรงข้ามกันกับ Low Priority
 - Scheduler จะเลือก thread แรกจาก highest priority queue
 - task ที่ทำอยู่บน highest priority queue ถ้าเกิด time slice expired, task จะถูก drop one level
+- แต่ละ job จะมี timeout tag ติดไปด้วย ทำให้เป็นการแก้ปัญหา starvation ได้ ถ้าเกิด timeout ก็จะปรับ priority ขึ้นไปที่ละขั้น
 
 ![](https://media.discordapp.net/attachments/1014398974649708624/1035048115708903527/unknown.png)
 
