@@ -542,3 +542,481 @@
 	- thread library จะเป็นคนตัดสินใจว่าจะรันตัวไหนต่อไป
 - **Upcall** -> เกิดการย้ายของ user-level thread เมื่อมีการ block ที่ทาง kernel thread root ของตัวมัน เพื่อยังคงให้ใช้งานได้
 
+## Synchronization
+
+### Recap
+- การทำงานแยก Thread จะมีการเข้าถึง Shared Resource ไว้ให้แต่ละ Thread เข้าถึงได้
+- ถ้าเกิดมี Thread นึงทำการ write ไปที่ Shared Resource แล้วมี Thread อื่นมา Read ในที่ๆเดียวกัน -> **Race Condition**
+- Solution -> **Synchronization** ทำให้แต่ละ Thread รู้จังหวะสำหรับการอ่านและเขียนใน Shared Resource
+
+### Synchronization Motivation
+- When threads cocurrently read/write shared memory, program behaviour is undefined
+	- Two threads write to the same varialbe; which one should win?
+- Thread schedule is non-deterministic
+- Complier/hardware instruction reordering
+	- เปลี่ยนลำดับการประกาศตัวแปร
+- Multi-word operations are not atomic (คำสั่งที่ทำงานนานเกินไป)
+	- ไม่มีสมบัติความ Atomic คือการทำงานแบบ either completely or none at all
+
+### Definitions
+- **Race Condition**: output of concurrent program depends on the order of operations between threads
+- **Mutual Exclusion**: Only one thread does a particular thing at time
+	- ห้าม 2 or more thread ทำงานในส่วนๆนึงของโค้ดในเวลาเดียวกัน
+	- **Critical section**: piece of code that only one thread can execute at once
+		- คือในส่วนของ **Shared Resource** ไปโดยปริยาย
+- **Lock**: prevent someone from doing something
+	- Lock before entering critical section, before accessing shared resource
+	- Unlock when leaving, after done accessing shared resource
+- **Starvation**: ไม่เกิดการทำงานในส่วนของ shared resource เลย
+
+### TOO MUCH MILK
+- Solution is complicated
+- Modern copliers/architectures reorder instructions
+- Generalizing too many threads/processors
+
+### Activity I
+![](https://media.discordapp.net/attachments/1014398974649708624/1027419417597968394/unknown.png)
+- **Answer**: สามารถเกิดได้ เพราะว่าอาจจะเกิดปัญหาจากการ reordering instruction ของ ตัว pinitialized = true ก่อนประกาศค่าฟังกชั่นของ p จริงๆ ทำให้สามาถเกิด panic ได้ใน thread ที่ 2
+
+### Locks
+- Lock::acquire รอจนกว่า lock จะเปิดจากนั้นก็ทำการ acquire the lock
+- Lock::release relase lock, waking up anyone waiting for it
+1. At most one lock holder at a time (safety)
+2. If no one holding, acquire gets lock (progress)
+3. If all lock holders finish and no higher priority waiters, waiter eventually gets lock (progress)
+- Locks ทำให้ concurrent code -> much simpler
+![](https://media.discordapp.net/attachments/1014398974649708624/1027423608517181461/unknown.png)
+- ทำให้เกิดส่วนที่เป็น **Critical Section** และเกิดสภาวะที่เรียกว่า **Mutual Exclusion**
+
+### Rules for using Locks
+- Lock is intially free (เริ่มต้นมาจะมีสถานะเป็น ว่าง สามารถถูกนำไปใช้งานได้)
+- Always acquire before accessing shared resource structure
+	- beginning of procedure
+- Always release after finishing with shared resource
+	- end of procedure
+	- **only the lock holder can release**
+- Never access shared resource without lock -> **Danger!**
+
+### Semaphores
+- คือ object ชนิดนึงที่มีค่า non-negative integer value
+	- P() atomically waits for value to become > 0, then decrement
+		- เปรียบได้เหมือน lock::acquire
+	- V() atomically increments value (waking up waiter if needed)
+		- เปรียนได้เหมือน lock::release
+- Semaphores are like integers except:
+	- Only operations are P and V
+	- Operations are atomic
+		- ถ้ามี value = 1; ใช้ P() * 2 จะทำให้ค่าเป็น 0 แล้วจะกลายเป็นตัว waiter
+- useful for **Unlocked wait**: interrupt handler, fork/join
+
+### Condition Variables
+- Waiting inside a critcal section
+	- called only when holding a lock
+- **Wait**: atomically relase lock and relinquish processor
+	- reaccquire the lock when awake
+- **Signal**: wake up a waiter, if any
+- **Broadcast**: wake up all waiters, if any
+
+### Atomic
+- คือคุณสมบัติที่การทำงานของ operation นึงจะทำงานอย่าง either completely or none at all
+- จะไม่มีการ context switch ระหว่าง instruction
+- ว่าง่ายๆคือ 1 Operation = 1 Instruction => Atomic
+
+### Summary after presentation
+- อาจารย์ต้องการให้ประยุกต์ใช้ Lock + Condition Variable (Monitor.Wait(), Monitor.Pulse(), ...)
+- มันจะทำให้โปรแกรมมีความ Thread safe มากกว่า version 5 ของเรา
+- ใน Csharp อาจจะมีการประยุกต์ใช้ Queue ได้เลยแต่อาจจะจำเป็นต้องใช้ Queue.Synchonize เพื่อให้
+โปรแกรมมีความ Thread safe ได้
+- `Queue TS = Queue.Synchronize(new Queue())` <- ทำให้ Queue เป็น Thread safe
+
+- Shared resource => เกิดปัญหา race condition
+- race condition -> แก้ได้ด้วย Lock (Synchronization)
+- การใช้ Lock -> Starvation, Deadlock
+
+### Deadlocks
+- มีปัจจัยในการก่อให้เกิดคือ
+1. Limit access to resources (มีการใช้ Lock) *ไม่เสมอไป*
+2. Independent request: ยกตัวอย่างเช่น 
+	- มีสอง thread ที่ต้องการ acquire resource ตัวเดียวกัน แบบสลับขั้นตอนกัน
+```Thread1
+A.acquire()
+<-- context switch here
+B.acquire()
+B.release()
+A.release()
+```
+```Thread2
+B.acquire() <-- this line runs
+A.acquire() <-- deadlock happens here
+A.release()
+B.release()
+```
+	-  **wait while holding**: ในกรณีที่ thread นั้น wait แต่มีการถือ "กุญแจ" ติดไปด้วย
+```Thread1
+A.acquire()
+t1.wait() ---> มันรอ แต่ thread2 ไม่สามารถทำงานได้เพราะว่า "กุญแจ" ยังอยู่ที่ thread1 อยู่
+A.release()
+```
+```Thread2
+A.acquire() --> cant run this line cause A is still allocated to thread1
+t1.signal()
+A.release()
+```
+3. Circular chain of request: มีการขอ requset เข้าเป็นวงกลม ทำให้เกิด deadlock เพราะว่า resource ถูก allocated ไปให้ thread อื่นก่อนแล้ว
+t1 -> A , t2 -> b, t3 -> c, t4 -> d, but when t1 -> b "deadlock" happens
+4. No Pre-Emption
+
+## Scheduling
+
+### Main points
+- Scheduler คือตัวที่ทำหน้าที่ในการจัดการ scheduling policy สำหรับการบอกว่า what to do next, ในตอนที่มีหลาย thread ที่พร้อมจะทำงาน
+- definitions: response time, throughput, predictability
+- Uniprocessor policies
+	- FIFO, round robin, optimal
+	- multilevel feedback as approximation of optimal
+- Multiprocessor policies
+	- Affinity scheduling, gang scheduling
+- Queueing theory: can you predict/improve a system's response time?
+
+### Definitions
+- **Tasks/Job** : user request eg. mouse click, web request, shell command etc.
+- **Latency/response time**: เวลาที่ใช้ในการทำงานสำหรับงานๆหนึ่ง
+- **Throughput**: how man tasks can be done per unti of time
+- **Overhead**: how much extra work is done by the scheduler
+- **Fairness**: how equal is the performance received by different users
+- **Predictability**: how consistent is the performance over time
+- **Workload**: set of tasks for system to perform
+- **Preemptive scheduler**: if we can take resources away from a running task
+- **Work-conserving**: resource is used whenever there is a task to run
+- **Scheduling algorithm**:
+	- รับ workload เป็น input
+	- กำหนดว่า tasks ไหนจะทำงานก่อน
+	- มี output คือ  performance metric (throughput, latency)
+	- only preemptive, work-conserving schedulers to be considered
+
+### First Int First Out (FIFO)
+- คือการจัดให้ tasks รันตามลำดับที่เข้ามา
+- example: memcahced (facebook cache of friend lists, etc.)
+
+### Shortest Job First (SJF)
+- ตามชื่อเลยคือ ทำงานที่มีงานน้อยที่สุดก่อน ส่วนมากจะเรียกว่า **Shortest Remaining Time First (SRTF)**
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1035030643945508914/unknown.png?width=945&height=685)
+
+### QnA
+- Claim: SJF is optimal for average response time - Why?
+	- A: ในกรณีที่มีงานที่มีขนาดใหญ่ก็จะให้ไปทำงานนั้นๆภายหลัง เพื่อเป็นการลด latency ลง ไม่ให้งานใหญ่ไปทำให้ งานที่เหลือมี latency เพิ่มขึ้น
+- SJF Downside?
+	- A: เกิด Starvation ของ bigger tasks ถ้าเกิดมี smaller tasks เข้ามาในคิวเรื่อยๆ + irl เราไม่สามารถวัดขนาดของ task อย่างแน่นอนได้
+- Is FIFO ever optimal?
+	- FIFO จะเป็น alogrithm ที่ optimal ก็ต่อเมื่อ งานที่เข้ามามีขนาดเท่าๆกันทั้งหมด  
+	- Pessimal ? : Pessimal case ในกรณีที่มีการเรียงของงานขนาดใหญ่เข้ามาทำก่อน ทำให้เป็นการเพิ่ม latency ของ job อื่นๆที่เกิดในภายหลัง
+
+### Round Robin
+-  มีการกำหนดคาบเวลาขึ้นมา เรียกว่า **time quantum**
+	- ถึงแม้ว่า tasks นั้นจะยังไม่เสร็จ แต่ถ้าเกิดหมดเวลาแล้ว ก็ต้องไปต่อท้ายแถว วนไป
+-  เลือก time quantum อย่างไรให้เหมาะสม
+	- ถ้า time quantum ใหญ่ไป -> ก็ไม่ต่างกันกับ FIFO
+	- ถ้า time quantum น้อยไป -> one instruction?? -> too much overhead (context switch) -> ถูกมองเป็น SJF **เป็นการแก้ปัญหา Starvation เนื่องจากมีการเข้าถึงงานทุกๆงานอย่างเท่าๆกัน**
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1035037844508524564/unknown.png?width=824&height=685)
+
+- RR > FIFO : ไม่เสมอไป เพราะว่าในกรณีที่ task ใน workload มีขนาดเท่ากันหมด ใน RR ถ้าเกิดมีการแบ่งเวลาในมี time quantum น้อยๆ ก็จะส่งผลให้เกิด average response time ที่มากขึ้น
+- **RR** = Fairness ? in some sense yes, เพราะว่า แต่ละ job จะได้เข้าถึง cpu อย่างเท่าเทียมกัน ก็มาจากที่หลังหมดเวลา time quantum ก็จะต้องไปต่อท้ายคิว
+
+### Mixed Workload
+![](https://media.discordapp.net/attachments/1014398974649708624/1035044981456523284/unknown.png?width=1255&height=685)
+- เกิดปัญหาจาก job ที่มีการใช้ Lock หรือเสร็จก่อนหมดเวลา time quantum 
+
+### Max-Min Fairness
+- เป็น algorithm ที่ balance ระหว่าง repeating tasks:
+- one approach: maximize the minimum allocation given to a task
+	- if any taskn eed less than an equal share, schedule the smallest of these first
+	- split the remaining time using max-min
+	- if all remaining tasks need at least equal share, split evenly
+
+### Multi-level Feedback Queue (MFQ)
+- **Goals**:
+	- Responsiveness
+	- Low overhead
+	- Starvation freedom
+	- Some tasks are high/low priority
+	- Fairness (among equal priority tasks)
+- มีชุดของ Round Robins Queues: แต่ละคิวก็จะมีค่า priority ที่แตกต่างกัน 
+- คิวที่มี High Priority จะมี short time slices ก็ตรงข้ามกันกับ Low Priority
+- Scheduler จะเลือก thread แรกจาก highest priority queue
+- task ที่ทำอยู่บน highest priority queue ถ้าเกิด time slice expired, task จะถูก drop one level
+- แต่ละ job จะมี timeout tag ติดไปด้วย ทำให้เป็นการแก้ปัญหา starvation ได้ ถ้าเกิด timeout ก็จะปรับ priority ขึ้นไปที่ละขั้น
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1035048115708903527/unknown.png)
+
+### Uniprocessor Summary
+- FIFO is simple and minimizes overhead
+- ถ้าแต่ละ task มีขนาดที่แตกต่างกันออกไป -> FIFO can have very poor average response time
+- tasks are equal in size -> FIFO is optimal
+
+## Address Translation
+- ถือว่าเป็น Overhead เพราะเป็นงานที่ user ไม่ได้สั่ง
+- Address Translation Concept - จะเปลี่ยนจาก virtual address to a physical address ได้อย่างไร
+	- Algorithm ต้องใช้เวลาน้อย
+- Flexible Address Translation
+	- base and bound
+	- segmentation
+	- paging
+	- multilevel translation
+- Efficient Address Translation
+	- Translation Lookaside Buffers (TLB)
+	- Virtually and physically addressed cahces
+
+### Address Translation Goals
+- Memory protection: ป้องกันไม่ให้แต่ละ process ไป "กวน" กันได้
+- Memory sharing: ยกตัวอย่างคือ เปิดโปรแกรมเดียวกัน ก็จะมีการ share กันระหว่างส่วน code ของโปรแกรม
+- Sparse addresses: การจัดการในส่วนของ heap/stack
+- Efficiency
+	- memory placement
+	- runtime lookup
+	- compact translation tables
+
+### Virtually Addressed Base and Bounds
+- Base: คือ addr. เริ่มแรกที่ถูกจัดให้ process นั้น (physical addr. แรกที่ถูก assign)
+- Bounds: ขนาดของ addr. ที่จองไว้
+- **last physical address** = base addr. + bound
+- **physical address** = virutal address + base address
+- virual address จะถูกเช็คกับค่า bound ว่ายังอยู่ในขอบเขตที่ได้รับมาอยู่หรือป่าว 
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1037557105151975475/image.png?width=1194&height=685)
+
+- **Pros**
+	- Simple
+	- Fast (2 register, adder, comparator)
+	- Safe
+	- Can relocate in physical memory without changing process
+- **Cons**
+	- can't keep program from accidentally overwriting its own code
+	- can't share code/data with other processes
+	- can't grow stack/heap as needed
+	- อาจจะเกิด fragment เป็นช่องว่างๆไว้ จำเป็นอาจจะต้องมีการทำ de-fragment เพื่อเลื่อนให้มีช่องว่างที่มากขึ้น
+
+### Segmentation
+- Segmentation is a **contigious region of virtual memory**
+	- เป็นวิธีการที่มีพื้นฐานอยู่บน base & bounds
+	- จะมี 4 base & bounds -> code, data, heap, stack
+- แต่ละ process มี *segment table* (ใน hardware)
+- segment จะสามารถถูก located ในตำแหน่งใดก็ได้ใน physical memory
+	- แต่ละ segment จะมี start, length, access permission (เป็นการทำ safety)
+- process สามารถ share segments ได้
+	- มีค่า start, length เท่ากัน access permission จะเหมือนกันหรือไม่ก็ได้
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1037565264981655692/image.png?width=1031&height=685)
+
+#### Example of Segmentation Address Translation
+![](https://media.discordapp.net/attachments/1014398974649708624/1037567876011397150/image.png?width=902&height=685)
+
+- Example: จาก Virtual Memory จากโจทย์ 2bit of segment, 12 bit offset
+	- main: (0)240 -> (00)00 0010 0100 0000 จะมี segment = 0, offset = 0x(240)
+		- physical memory = 0x(4000) + 0x(240) = 0x(4240)
+	- x: 1108 -> 0001 0001 0000 1000 -> segment = 1, offset = 0x(108)
+		- physical memory = 0 + 0x(108) = 108
+- **Pros**
+	- can share code/data segments between processes
+	- can protect code segment from being overwritten
+	- can transparently grow stack/heap as needed
+	- can detect if need to copy-on-write
+- **Cons**
+	- complex memory management
+		- มีการหาพท. ว่างที่เพียงพอสำหรับ 4 ชิ้นส่วน (code, data, heap, stack) ทำได้ยาก
+	- may need to rearrange memory from time to time to make room for new segment or growing segment
+		-
+
+###  Paged Translation
+- จะมีการแบ่ง physical memory ออกเป็น block ที่มีการ fixed units -> **"Pages"**
+- ทำให้การหา page ที่ว่างทำได้อย่างง่าย
+	- bitmap allocation: 00111111100001110
+	- แต่ละ bit จะแสดงถึง 1 physical page frame
+- แต่ละ process จะมี page table เป็นของตัวเอง
+	- เก็บใน physical memory
+	- pointer to page table start, page table length
+-  จะเป็นการ map ระหว่าง virtual page กับ frame ของ page ใน physical memory
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1037575894736322691/image.png?width=748&height=685)
+
+#### Implementation
+![](https://media.discordapp.net/attachments/1014398974649708624/1037576360715096094/image.png?width=822&height=685)
+- (page#)(offset) -> (frame)(offset)
+![](https://media.discordapp.net/attachments/1014398974649708624/1037577177446760509/image.png?width=788&height=685)
+
+- **Pros**
+	- แก้ปัญหาของ Segmentation ในการหาพื้นที่ว่าง -> bitmap allocation
+	- no external fragmentation -> fixed units "page"
+- **Cons**
+	- ความ complex
+	- การใช้พื้นที่ ที่มีประสิทธิภาพน้อยกว่าวิธีก่อนหน้า
+	- Sparse Address Spaces
+		- การเพิ่มแต่ละ page เพื่อ รองรับ dynamic segments
+		- ทำให้ page table จะมีขนาดใหญ่มากก
+
+### Multi-level Translation
+- Tree of translation tables
+	- paged segmentation
+	- multi-level page tables
+	- multi-level paged segmentation
+- fixed-size page as lowest level unti of allocation
+	- efficient memory allocation 
+	- efficient for sparse addresses
+	- efficient disk transfer
+	- easier to build translation lookaside buffers
+	- efficient reverse lookup
+	- variable granularity for protection/sharing
+
+### Paged Segmentation
+- process memory is segmented
+- segment table
+- page table สำหรับ code, data, heap, stack
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1037584031358926939/image.png?width=851&height=685)
+
+### Multilevel Paging
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1037585670983655424/image.png?width=775&height=685)
+- จากรูปจะมีทั้งหมด 73 table
+	- level 1 = 1
+	- level 2 = 8
+	- level 3 = 64
+- **Pros**
+	- allocate/fill only page table entries that are in use
+	- simple memory allocation
+	- share at segment or page level
+- **Cons**
+	- space overhead: one pointer per virtual page
+	- many lookups per memory reference
+
+### Efficient Address Translation
+- Translation Lookaside Buffer (TLB)
+	- ทำการ cache address ของ virtual page ไว้ สำหรับ address ที่ทำการแปลไปไม่นาน
+- cost of translation = cost of TLB lookup + Prob(TLB miss) * cost of page table lookup
+
+### Translation Lookaside Buffers
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1037590190698528778/image.png?width=848&height=685)
+
+#### TLB Lookup
+![](https://media.discordapp.net/attachments/1014398974649708624/1037590353949237339/image.png?width=840&height=685)
+
+### Address Translation Uses
+- process Isolation
+- efficient Interprocess communication
+- shared code segments
+- program initialization
+- dynamic memory allocation
+- cache management
+- program debugging
+- zero-copy I/O
+- memory mapped files
+- demand-paged virutal memory
+
+## Virtural Memory
+- **micro-processor** -> **cache** -> **RAM** -> **virtual memory in storage**
+- ใช้บางส่วนของ storage มาเก็บข้อมูล ที่ในขณะนั้นยังไม่ถูกประมวลผลใน RAM 
+- ใช้ technique ***"Address Translation"*** -> Memory Mapped File (ใช้การ copy แบบ "Zero Copy")
+- Memory Mapped File -> มีการแบ่งส่วนของข้อมูลเป็น block เรียกว่า "frame"  สามารถ copy frame แล้วย้ายไปยัง frame ของ RAM ได้เลย ไม่ต้องผ่าน Buffer
+- ข้อจำกัดคือ Hardware ของ ความเร็วของ Storage
+- **Cache** -> เป็นเก็บ copy ของข้อมูลที่ทำให้ เข้าถึงได้เร็วขึ้น จะมี **"Cache Policy"** เพื่อเป็นการจัดการ cache ว่าจะ drop หรือจะแก้ข้อมูล frame ไหนไว้ ถ้าหากเกิดว่าพื้นที่ที่จัดเก็บเต็ม
+
+### Premise
+- RAM มีช่องเก็บข้อมูล **frame** อยู่ 1000 ช่อง -> เพิ่มช่องเก็บข้อมูลโดยใช้ **Virtual Memory** คือใช้ Storage(hdd, ssd) เก็บข้อมูลเพิ่มได้ โดยใช้ technique ***address translation***
+- ใน table ที่ใช้ในการ map ของ address ถ้าเกิดว่ามีการเก็บข้อมูลใน virtual memory สมมติว่าคือช่องที่ 1002 ในช่อง access ต้อง mark ว่าเป็น **invalid** -> ทำให้เมื่อตอนที่จะ access data ในช่องนี้จะเกิด invalid exception -> handle ด้วยการ หาที่ว่างใน RAM แล้ว copy ข้อมูลมาใส่ (1002 -> x) จากนั้น update mapping table โดยเปลี่ยนตัว entry กับ access ให้เป็นปกติ
+- ถ้าเกิด invalid exception แต่ RAM เต็ม -> จะหาช่องใน RAM ที่ตรงเงื่อนไข (**cache policy**) copy มาใส่ใน virtual memory แล้วทำการสลับกันกับ frame ที่ต้องการเข้าถึงที่เกิด invalid exception -> update mapping table เปลี่ยน access, frame# ของทั้ง 2 frame ที่ทำการ swap
+
+### Definitions
+- **Cache**
+- **Cache block**: หน่วยการจัดเก็บแต่ละ block ภายใน cache
+- Program tends to reference
+	- **Temperal locality**: "loop"
+	- **Spatial locality**: "ถัดไป" "nearby"
+
+### Cache Concept
+- Read
+![](https://media.discordapp.net/attachments/1014398974649708624/1040093328651333704/image.png)
+- Write
+![](https://media.discordapp.net/attachments/1014398974649708624/1040093400701083728/image.png?width=1127&height=685)
+	- **write through**: micro-processor สั่ง write -> เข้า cache -> write update in ram
+	- **write back**: micro-processor สั่ง write -> เข้า cache <- รอจนกว่าข้อมูลชุด write ถูกอัพเดท -> write update in ram
+
+### Memory Hiearchy
+![](https://media.discordapp.net/attachments/1014398974649708624/1040094021814583316/image.png?width=1138&height=685)
+
+### Main Points
+- can we provide the illusion of near infinite memory in limited physical memory?
+	- demand-paged virutal memory
+	- memory-mapped files
+- how do we choose which page to replace?
+	- FIFO, MIN, LRU, LFU, CLOCK
+
+### Hardware address translation is a powerful tool
+- Kernel trap on read/write to selected address
+	- **Copy on write**: ตัวที่ถูก write จะทำการ copy ออกไปใน free space
+	- **Fill on reference**: ใน RAM จะโหลดช่องข้อมูลที่ program มีการเรียกใช้
+- **Memory mapped files** คือ ไฟล์แบบพิเศษที่สามารถทำ zero copy ได้ ใช้ใน virtual memory in storage
+
+### Demand Paging
+![](https://media.discordapp.net/attachments/1014398974649708624/1040101223979827281/image.png?width=1030&height=685)
+
+### Allocating page frame
+- เลือก page ที่เข้าเงื่อนไขที่จะถอดออกมาจาก RAM 
+- ไปหา page table entries ที่อ้างถึง page ที่จะเอาออก
+- set each page table entry to invalid
+- remove any TLB entries
+- write changes on page back to dis, if necessary
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1040103188159807569/image.png?width=972&height=685)
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1040103621435609178/image.png)
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1040103787798474842/image.png?width=1106&height=685)
+
+### Virtual or Physical Dirty/Use Bits
+- most machines keep dirty/use bits in the page table entry
+- physical page is
+	- modified if _any_ page table entry that points to it is modified
+	- recently used if _any_ table entry that points to it is recently used
+
+### Memory-mapped files
+- programming simplicity, esp for large flies
+- zero-copy I/O
+- pipelining
+- interprocess communication
+
+### Cache Replacement Policy
+- goal: reduce cache miss
+
+### FIFO
+- replace the entry that has been in the cache the longest time
+- worst case for FIFO is if a program strides through memory that is larger than the cache
+- เอาตัวแรกสุดออก
+
+### MIN,LRU, LFU
+- **MIN**: แทนที่ cache entry that will not be used for the longest time into the future
+	- optimality proof based on exchange: if evict an entry used sooner, that will trigger an earlier cache miss
+- **Least Recently Used (LRU)
+	- replace the cache entry that has not been used for the longest time in the past
+	- approximation of MIN
+- **Least Frequently Used (LFU)
+	- replace the cache entry used the least often (in the recent past)
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1040107357860007956/image.png?width=1048&height=685)
+
+![](https://media.discordapp.net/attachments/1014398974649708624/1040107288209412106/image.png?width=961&height=685)
+
+### Belady/s Anomaly
+![](https://media.discordapp.net/attachments/1014398974649708624/1040110983756124222/image.png)
+
+### Recap
+- **MIN** is optimal
+	- replace the page or cache entry that will be used farthest into the future
+- **LRU** is an approximation of MIN
+	- for programs that exhibit spatial and temporal locality
+
+### Exams
+- choice, เติมคำ
+	- choice 1 คำตอบ และบางข้อก็จะมีหลายคำตอบควรจะเลือกคำตอบให้ครบตามที่โจทย์กำหนด
+- open -> เอาของที่สถาบันอนุญาติเข้าไปได้ทั้งหมด
