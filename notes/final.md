@@ -116,7 +116,7 @@
 	- keep them from interfering with each other - process
 	- ถ้าเกิดการฝ่าฝืนกฏเกณฑ์ Kernel จะพยายามทำการ kill process นั้นทิ้ง ถ้าเกิดไม่สามารถ kill  ได้ก็จะเกิด the famous **BLUE SCREEN**
 
-### Hardware Support Dula-Mode Operation
+### Hardware Support Dual-Mode Operation
 - **Kernel mode**
 	- full priviledge of the hardware
 	- R/W any memory, access any I/O devices, R/W any disk sector, Send/Read any packet
@@ -244,7 +244,7 @@
 - **Atomic transfer of control**:
 	- **"Single instruction"**: ไม่ให้เกิด interrupt ระหว่างนี้ได้
 		- PC, SP, Memory protection, Kernel/user mode
-- **Transparent restarable execution**:
+- **Transparent restartable execution**:
 	- User program does not know interrupt occurred
 
 ![](https://media.discordapp.net/attachments/1014398974649708624/1045711459998519428/image.png?width=1022&height=685)
@@ -261,11 +261,10 @@
 ![](https://media.discordapp.net/attachments/1014398974649708624/1045712263010582538/image.png)
 
 ### Interrupt Stack
-- per-processor,
-	- kernel, user stack
+- per-processor, located in kernel (not user) memory (usually a process/thread has both: kernel and user stack)
 - case study: x86 Interrupt
-  1. Save current stack pointer
-  2. Save current program counter
+  1. Save current stack pointer (SP)
+  2. Save current program counter (PC)
   3. Save current processor staus word (condition codes)
   4. Switch to kernel stack; put SP, PC, PSW on stack
   5. Switch to kernel mode
@@ -280,9 +279,9 @@
 - Interrupt handler invoked with interrupts `disabled`
 	- re-enabled upon conpletion
 	- non-blocking
-  - ***pack up in a queue and pass off to an OS thread for hard work***
-    - ***wake up existing OS thread***
-- HW may have multiple leves of interrupts
+	- ***pack up in a queue and pass off to an OS thread for hard work***
+		- ***wake up existing OS thread***
+- HW may have multiple levels of interrupts
 	- Mask off (disable) lower priority interrupts
 	- Certain Non-Maskable-Interrupts (NMI)
 		- ไม่สามารถห้ามให้เกิด interrupt ได้
@@ -299,7 +298,7 @@
 
 ### Four Fundamental OS Concepts
 - **Thread** (virtual microprocessor): PC, register, Execution Flags, Stack
-- **Adress Space**: POV of program's view of memory is distinc from physical machine
+- **Adress Space**: POV of program's view of memory is distinct from physical machine
 - **Process** (an instance of a running program): Address Space + One or more Threads
 - **Dual mode operation / protection**
 	- only the "system" can access certain resources
@@ -352,7 +351,7 @@
 - copy args into memory in the address space
 - initialize the hardware context to start execution at **start**
 
-### Activity #3 Can these UNIX syscall return error ?
+### In-Class Activity: Can these UNIX syscall return error ?
 - fork() สามารถ return error ได้ ถ้าเกิดพื้นที่ storage มีไม่เพียงพอ
 - exec() สามารถ return error ถ้าเกิด pid ที่ระบุไม่มีอยู่จริง, ไม่สามารถเข้าถึงได้, ไม่มี permission หรือ ระบบไม่มี resource เพียงพอที่จะรันได้
 - wait() สามารถ return ทันทีเลยได้ ถ้าเกิดว่า state ของ child process เกิดการเปลี่ยนแปลงไปก่อนหน้านี้แล้ว ไม่ว่าจะเป็นการถูก terminated, ถูกหยุดด้วย signal, หรืออื่นๆ
@@ -368,7 +367,7 @@
 
 ### UNIX File System Interface
 - **Swiss Army Knife** : มีดพับ มีเครื่องมือหลายอย่าง
-- open the file, return file descriptor
+- open the file, return file descriptor -> Options:
 	- if file doesn't exist, return err
 	- if file doesn't exist, create file and open it
 	- if file does exist, return err
@@ -551,7 +550,7 @@
 
 ### Synchronization Motivation
 - When threads cocurrently read/write shared memory, program behaviour is undefined
-	- Two threads write to the same varialbe; which one should win?
+	- Two threads write to the same variable; which one should win?
 - Thread schedule is non-deterministic
 - Complier/hardware instruction reordering
 	- เปลี่ยนลำดับการประกาศตัวแปร
@@ -625,10 +624,8 @@
 ### Summary after presentation
 - อาจารย์ต้องการให้ประยุกต์ใช้ Lock + Condition Variable (Monitor.Wait(), Monitor.Pulse(), ...)
 - มันจะทำให้โปรแกรมมีความ Thread safe มากกว่า version 5 ของเรา
-- ใน Csharp อาจจะมีการประยุกต์ใช้ Queue ได้เลยแต่อาจจะจำเป็นต้องใช้ Queue.Synchonize เพื่อให้
-โปรแกรมมีความ Thread safe ได้
+- ใน Csharp อาจจะมีการประยุกต์ใช้ Queue ได้เลยแต่อาจจะจำเป็นต้องใช้ Queue.Synchonize เพื่อให้ โปรแกรมมีความ Thread safe ได้
 - `Queue TS = Queue.Synchronize(new Queue())` <- ทำให้ Queue เป็น Thread safe
-
 - Shared resource => เกิดปัญหา race condition
 - race condition -> แก้ได้ด้วย Lock (Synchronization)
 - การใช้ Lock -> Starvation, Deadlock
@@ -638,6 +635,7 @@
 1. Limit access to resources (มีการใช้ Lock) *ไม่เสมอไป*
 2. Independent request: ยกตัวอย่างเช่น 
 	- มีสอง thread ที่ต้องการ acquire resource ตัวเดียวกัน แบบสลับขั้นตอนกัน
+##### Thread1
 ```Thread1
 A.acquire()
 <-- context switch here
@@ -645,18 +643,21 @@ B.acquire()
 B.release()
 A.release()
 ```
+##### Thread2
 ```Thread2
 B.acquire() <-- this line runs
 A.acquire() <-- deadlock happens here
 A.release()
 B.release()
 ```
-	-  **wait while holding**: ในกรณีที่ thread นั้น wait แต่มีการถือ "กุญแจ" ติดไปด้วย
+	- **wait while holding**: ในกรณีที่ thread นั้น wait แต่มีการถือ "กุญแจ" ติดไปด้วย
+##### Thread1
 ```Thread1
 A.acquire()
 t1.wait() ---> มันรอ แต่ thread2 ไม่สามารถทำงานได้เพราะว่า "กุญแจ" ยังอยู่ที่ thread1 อยู่
 A.release()
 ```
+##### Thread2
 ```Thread2
 A.acquire() --> cant run this line cause A is still allocated to thread1
 t1.signal()
@@ -681,7 +682,7 @@ t1 -> A , t2 -> b, t3 -> c, t4 -> d, but when t1 -> b "deadlock" happens
 ### Definitions
 - **Tasks/Job** : user request eg. mouse click, web request, shell command etc.
 - **Latency/response time**: เวลาที่ใช้ในการทำงานสำหรับงานๆหนึ่ง
-- **Throughput**: how man tasks can be done per unti of time
+- **Throughput**: how man tasks can be done per unit of time
 - **Overhead**: how much extra work is done by the scheduler
 - **Fairness**: how equal is the performance received by different users
 - **Predictability**: how consistent is the performance over time
@@ -717,7 +718,8 @@ t1 -> A , t2 -> b, t3 -> c, t4 -> d, but when t1 -> b "deadlock" happens
 	- ถึงแม้ว่า tasks นั้นจะยังไม่เสร็จ แต่ถ้าเกิดหมดเวลาแล้ว ก็ต้องไปต่อท้ายแถว วนไป
 -  เลือก time quantum อย่างไรให้เหมาะสม
 	- ถ้า time quantum ใหญ่ไป -> ก็ไม่ต่างกันกับ FIFO
-	- ถ้า time quantum น้อยไป -> one instruction?? -> too much overhead (context switch) -> ถูกมองเป็น SJF **เป็นการแก้ปัญหา Starvation เนื่องจากมีการเข้าถึงงานทุกๆงานอย่างเท่าๆกัน**
+	- ถ้า time quantum น้อยไป -> one instruction?? -> too much overhead (context switch) -> ถูกมองเป็น SJF 
+- RR -> **เป็นการแก้ปัญหา Starvation เนื่องจากมีการเข้าถึงงานทุกๆงานอย่างเท่าๆกัน**
 
 ![](https://media.discordapp.net/attachments/1014398974649708624/1035037844508524564/unknown.png?width=824&height=685)
 
@@ -731,7 +733,7 @@ t1 -> A , t2 -> b, t3 -> c, t4 -> d, but when t1 -> b "deadlock" happens
 ### Max-Min Fairness
 - เป็น algorithm ที่ balance ระหว่าง repeating tasks:
 - one approach: maximize the minimum allocation given to a task
-	- if any taskn eed less than an equal share, schedule the smallest of these first
+	- if any taskn need less than an equal share, schedule the smallest of these first
 	- split the remaining time using max-min
 	- if all remaining tasks need at least equal share, split evenly
 
@@ -754,6 +756,12 @@ t1 -> A , t2 -> b, t3 -> c, t4 -> d, but when t1 -> b "deadlock" happens
 - FIFO is simple and minimizes overhead
 - ถ้าแต่ละ task มีขนาดที่แตกต่างกันออกไป -> FIFO can have very poor average response time
 - tasks are equal in size -> FIFO is optimal
+- SJF ถูกมองว่า optimal ในมุมมองของ processor ในด้านของ average response time
+- SJF จะแย่มากๆในมุมมองของ variance in response time
+- ถ้า task มีขนาดที่แตกต่างกัน RR จะใกล้เคียงกับ SJF
+- ถ้า task ขนาดเท่าๆกัน RR จะมี average time ที่**แย่**มากๆ
+- RR and Max-Min Fairness พยายามที่จะหลีกเลี่ยง Starvation
+- MFQ achieves responsivesness, low overhead, and fairness
 
 ## Address Translation
 - ถือว่าเป็น Overhead เพราะเป็นงานที่ user ไม่ได้สั่ง
@@ -826,7 +834,7 @@ t1 -> A , t2 -> b, t3 -> c, t4 -> d, but when t1 -> b "deadlock" happens
 	- complex memory management
 		- มีการหาพท. ว่างที่เพียงพอสำหรับ 4 ชิ้นส่วน (code, data, heap, stack) ทำได้ยาก
 	- may need to rearrange memory from time to time to make room for new segment or growing segment
-		-
+		- external fragmentation: พท.รอบๆ segment ที่ไม่ได้ใช้งาน
 
 ###  Paged Translation
 - จะมีการแบ่ง physical memory ออกเป็น block ที่มีการ fixed units -> **"Pages"**
@@ -903,10 +911,10 @@ t1 -> A , t2 -> b, t3 -> c, t4 -> d, but when t1 -> b "deadlock" happens
 ![](https://media.discordapp.net/attachments/1014398974649708624/1037590353949237339/image.png?width=840&height=685)
 
 ### Address Translation Uses
-- process Isolation
-- efficient Interprocess communication
+- process Isolation: ไม่ให้ process มาใช้ memory ปนกันใน kernel
+- efficient Interprocess communication: shared regions of memory between processes
 - shared code segments
-- program initialization
+- program initialization: รันโปรแกรมก่อนที่มันจะไปอยู่ใน memory
 - dynamic memory allocation
 - cache management
 - program debugging
@@ -920,7 +928,7 @@ t1 -> A , t2 -> b, t3 -> c, t4 -> d, but when t1 -> b "deadlock" happens
 - ใช้ technique ***"Address Translation"*** -> Memory Mapped File (ใช้การ copy แบบ "Zero Copy")
 - Memory Mapped File -> มีการแบ่งส่วนของข้อมูลเป็น block เรียกว่า "frame"  สามารถ copy frame แล้วย้ายไปยัง frame ของ RAM ได้เลย ไม่ต้องผ่าน Buffer
 - ข้อจำกัดคือ Hardware ของ ความเร็วของ Storage
-- **Cache** -> เป็นเก็บ copy ของข้อมูลที่ทำให้ เข้าถึงได้เร็วขึ้น จะมี **"Cache Policy"** เพื่อเป็นการจัดการ cache ว่าจะ drop หรือจะแก้ข้อมูล frame ไหนไว้ ถ้าหากเกิดว่าพื้นที่ที่จัดเก็บเต็ม
+- **Cache** -> เป็นที่เก็บ copy ของข้อมูลที่ทำให้ เข้าถึงได้เร็วขึ้น จะมี **"Cache Policy"** เพื่อเป็นการจัดการ cache ว่าจะ drop หรือจะแก้ข้อมูล frame ไหนไว้ ถ้าหากเกิดว่าพื้นที่ที่จัดเก็บเต็ม
 
 ### Premise
 - RAM มีช่องเก็บข้อมูล **frame** อยู่ 1000 ช่อง -> เพิ่มช่องเก็บข้อมูลโดยใช้ **Virtual Memory** คือใช้ Storage(hdd, ssd) เก็บข้อมูลเพิ่มได้ โดยใช้ technique ***address translation***
@@ -966,7 +974,7 @@ t1 -> A , t2 -> b, t3 -> c, t4 -> d, but when t1 -> b "deadlock" happens
 - ไปหา page table entries ที่อ้างถึง page ที่จะเอาออก
 - set each page table entry to invalid
 - remove any TLB entries
-- write changes on page back to dis, if necessary
+- write changes on page back to disk, if necessary
 
 ![](https://media.discordapp.net/attachments/1014398974649708624/1040103188159807569/image.png?width=972&height=685)
 
@@ -993,14 +1001,15 @@ t1 -> A , t2 -> b, t3 -> c, t4 -> d, but when t1 -> b "deadlock" happens
 - replace the entry that has been in the cache the longest time
 - worst case for FIFO is if a program strides through memory that is larger than the cache
 - เอาตัวแรกสุดออก
+![](https://media.discordapp.net/attachments/1014398974649708624/1047130856172556298/image.png)
 
 ### MIN,LRU, LFU
 - **MIN**: แทนที่ cache entry that will not be used for the longest time into the future
 	- optimality proof based on exchange: if evict an entry used sooner, that will trigger an earlier cache miss
-- **Least Recently Used (LRU)
+- **Least Recently Used (LRU)** "เอาตัวเก่าสุดออก"
 	- replace the cache entry that has not been used for the longest time in the past
 	- approximation of MIN
-- **Least Frequently Used (LFU)
+- **Least Frequently Used (LFU)** "เอาตัวที่ใช้น้อยสุดออก"
 	- replace the cache entry used the least often (in the recent past)
 
 ![](https://media.discordapp.net/attachments/1014398974649708624/1040107357860007956/image.png?width=1048&height=685)
